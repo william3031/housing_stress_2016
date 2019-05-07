@@ -32,13 +32,11 @@ library(scales)
 
 ```{r}
 ##original files - 2016 census data - csv string - zeros suppressed
-rentdata <- read_csv("sa2_hied_rntrd_2gmel_ zeros_suppressed.csv", skip = 10) %>% 
-  filter(GCCSA == "Greater Melbourne") %>% # gets rid of the rows at the end
-  select(-X7) #removes the last column
+rentdata <- read_excel("sa2_data.xlsx", sheet = "sa2_hied_rntrd_2gmel_ zeros_sup", range = "A11:F49106") %>% 
+  filter(GCCSA == "Greater Melbourne") 
 
-mortdata <- read_csv("sa2_hied_mrerd_2gmel_ zeros_suppressed.csv", skip = 10) %>% 
-  filter(GCCSA == "Greater Melbourne") %>% # gets rid of the rows at the end
-  select(-X7) #removes the last column
+mortdata <- read_excel("sa2_data.xlsx", sheet = "sa2_hied_mrerd_2gmel_ zeros_sup", range = "A11:F59708") %>% 
+  filter(GCCSA == "Greater Melbourne")
 ```
 
 ##Transforming the rent data
