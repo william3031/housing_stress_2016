@@ -192,6 +192,16 @@ write_csv(housingstress_sa2, "tables_out/housingstress_sa2.csv")
 
 ```
 
+## What does it look like?
+
+Most of the SA2s have fewer than 30 per cent of households in housing stress.
+
+```{r}
+ggplot(housingstress_sa2, aes(x = prop_stress)) +
+  geom_histogram(bins = 50)
+```
+
+
 ##The shapefile
 
 ```{r}
@@ -203,6 +213,8 @@ gm_shp <- st_read("shp/SA2_2016_GMEL.shp") %>%
 ```
 
 ##The map
+
+Concentrations in the growth areas.
 
 ```{r}
 tmap_mode("view")
