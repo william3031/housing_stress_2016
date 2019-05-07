@@ -1,0 +1,205 @@
+---
+title: "Housing Stress - SA2s in Greater Melbourne (without the map)"
+output: html_notebook
+---
+
+#Introduction
+
+Trying to calculate housing stress using 30/40 as in here:  https://www.ahuri.edu.au/policy/ahuri-briefs/2016/3040-indicator 
+
+2016 Census - Counting Dwellings, Place of Enumeration (SA2)
+
+Data Source: Census of Population and Housing, 2016, TableBuilder
+
+Counting: Dwellings Location on Census Night
+
+Variables:
+
+* HIED Equivalised Total Household Income (weekly)
+* RNTRD Rent (weekly) Ranges
+* MRERD Mortgage Repayments (monthly) Ranges
+
+```{r, warning=FALSE, message = FALSE}
+library(tidyverse)
+library(readxl)
+library(sf)
+library(tmap)
+library(janitor)
+library(scales)
+```
+
+##Importing the raw data
+
+```{r}
+##original files - 2016 census data - csv string - zeros suppressed
+rentdata <- read_excel("sa2_data.xlsx", sheet = "sa2_hied_rntrd_2gmel_ zeros_sup", range = "A11:F49106") %>% 
+  filter(GCCSA == "Greater Melbourne") 
+
+mortdata <- read_excel("sa2_data.xlsx", sheet = "sa2_hied_mrerd_2gmel_ zeros_sup", range = "A11:F59708") %>% 
+  filter(GCCSA == "Greater Melbourne")
+```
+
+##Transforming the rent data
+
+```{r}
+rent <- rentdata %>% 
+  rename(sa2 = SA2) %>% 
+  rename(hhincwk = `HIED Equivalised Total Household Income (weekly)`) %>% 
+  rename(rentwk = `RNTRD Rent (weekly) Ranges`) %>% 
+  mutate(hhincwk = as_factor(hhincwk), rentwk = as_factor(rentwk)) %>% 
+  rename(hh = Count) %>% 
+  select(-Counting)
+rent
+
+rent_dw <- rent %>%
+  filter(hhincwk != 'Not applicable') %>% 
+  filter(rentwk != 'Not applicable') %>% 
+  group_by(sa2) %>% 
+  summarise(dw = sum(hh)) 
+rent_dw #improve this by just getting the dwelling data from the datapacks and joining them on at the end -G32
+
+rent_hh <- rent %>% 
+  filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable')) %>% 
+  filter(!rentwk %in% c('Not stated', 'Not applicable' ))
+rent_hh
+```
+
+##Transforming the mortgage data
+
+```{r}
+mort <- mortdata %>% 
+  rename(sa2 = SA2) %>% 
+  rename(hhincwk = `HIED Equivalised Total Household Income (weekly)`) %>% 
+  rename(mortmth = `MRERD Mortgage Repayments (monthly) Ranges`) %>% 
+  mutate(hhincwk = as_factor(hhincwk), mortmth = as_factor(mortmth)) %>% 
+  rename(hh = Count) %>% 
+  select(-Counting)
+mort
+
+mort_dw <- mort %>% 
+  filter(hhincwk != 'Not applicable') %>% 
+  filter(mortmth != 'Not applicable') %>% 
+  group_by(sa2) %>% 
+  summarise(dw = sum(hh)) 
+mort_dw #as noted above
+
+mort_hh <- mort %>% 
+  filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable')) %>% 
+  filter(!mortmth %in% c('Not stated', 'Not applicable'))
+mort_hh
+```
+
+##Midpoints for income
+
+```{r}
+hhincwk_mid <- rentdata %>% 
+  rename(sa2 = SA2) %>% 
+  rename(hhincwk = `HIED Equivalised Total Household Income (weekly)`) %>% 
+  mutate(hhincwk = as_factor(hhincwk)) %>% 
+  distinct(hhincwk) %>% 
+  filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable', 'Total')) %>% 
+  mutate(inc_low = c(1, 150, 300, 400, 500, 650, 800, 1000, 1250, 1500, 1750, 2000, 2500, 3000)) %>% 
+  mutate(inc_high = c(149, 299, 399, 499, 649, 799, 999, 1249, 1499, 1749, 1999, 2499, 2999, 3499)) %>% 
+  mutate(inc_mid = (inc_low+inc_high)/2) %>% 
+  select(hhincwk, inc_mid)
+hhincwk_mid 
+```
+
+Filter to include only bottom 40 per cent of households by income
+
+Equivalised disposable household income - P40 = $714  in 2015-16 for VIC - http://www.abs.gov.au/AUSSTATS/abs@.nsf/DetailsPage/6523.02015-16?OpenDocument
+
+```{r}
+hhincwk_mid40 <- hhincwk_mid %>% 
+  filter(inc_mid <= 714)
+hhincwk_mid40
+```
+
+##Midpoints for rent and mortgages
+
+```{r}
+rentwk_mid <- rentdata %>% 
+  rename(rentwk = `RNTRD Rent (weekly) Ranges`) %>% 
+  distinct(rentwk) %>% 
+  mutate(rentwk = as_factor(rentwk)) %>% 
+  filter(!rentwk %in% c('Not stated', 'Not applicable', 'Total' )) %>% 
+  mutate(rent_low = c(0, 1, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 550, 650, 750, 850, 950)) %>% 
+  mutate(rent_high = c(0, 74, 99, 124, 149, 174, 199, 224, 249, 274, 299, 324, 349, 374, 399, 424, 449, 549, 649, 749, 849, 949, 1050)) %>% 
+  mutate(rent_mid = (rent_low + rent_high)/2) %>% 
+  select(rentwk, rent_mid)
+rentwk_mid
+
+mortwk_mid <- mortdata %>% 
+  rename(mortmth = `MRERD Mortgage Repayments (monthly) Ranges`) %>% 
+  distinct(mortmth) %>% 
+  mutate(mortmth = as_factor(mortmth)) %>% 
+  filter(!mortmth %in% c('Not stated', 'Not applicable')) %>% 
+  mutate(mort_low = c(0, 1, 150, 300, 450, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 3000, 4000, 5000)) %>%
+  mutate(mortwk_low = mort_low/4) %>% 
+  mutate(mort_high = c(0, 149, 299, 449, 599, 799, 999, 1199, 1399, 1599, 1799, 1999, 2199, 2399, 2599, 2999, 3999, 4999, 5999)) %>% 
+  mutate(mortwk_high = mort_high/4) %>% 
+  mutate(mort_mid = (mort_low + mort_high)/2) %>% 
+  mutate(mortwk_mid = (mortwk_low + mortwk_high)/2) %>% 
+  select(mortmth, mort_mid, mortwk_mid)
+mortwk_mid 
+```
+
+##Joining
+
+```{r}
+#joining the data  ####
+rent_join <- left_join(hhincwk_mid40, rent_hh)
+rent_join <- left_join(rent_join, rentwk_mid)
+rent_join
+
+mort_join <- left_join(hhincwk_mid40, mort_hh)
+mort_join <- left_join(mort_join, mortwk_mid)
+mort_join
+```
+
+##Stress
+
+```{r}
+rentalstress <- rent_join %>% 
+  mutate(prophousing = rent_mid/inc_mid) %>% 
+  mutate(hstress = ifelse(prophousing <= 0.3, 0, hh)) %>% 
+  group_by(sa2) %>% 
+  summarise(lowinc_hh = sum(hh), hstress = sum(hstress))
+rentalstress <- left_join(rentalstress, rent_dw, by = "sa2") %>% 
+  select(sa2, dw, lowinc_hh, hstress) %>% 
+  mutate(propstress = hstress/dw)
+rentalstress
+
+mortgagestress <- mort_join %>% 
+  mutate(prophousing = mortwk_mid/inc_mid) %>% 
+  mutate(hstress = ifelse(prophousing <= 0.3, 0, hh)) %>% 
+  group_by(sa2) %>% 
+  summarise(lowinc_hh = sum(hh), hstress = sum(hstress))
+mortgagestress <- left_join(mortgagestress, mort_dw, by = "sa2") %>% 
+  select(sa2, dw, lowinc_hh, hstress) %>% 
+  mutate(propstress = hstress/dw)
+mortgagestress 
+
+housingstress_join <- full_join(rentalstress, mortgagestress)
+housingstress_sa2 <- housingstress_join %>% 
+  group_by(sa2) %>% 
+  summarise(dw = sum(dw), lowinc_hh = sum(lowinc_hh), hstress = sum(hstress)) %>% 
+  mutate(prop_stress = hstress/dw) %>% 
+  filter(!is.na(prop_stress))
+housingstress_sa2
+
+write_csv(housingstress_sa2, "tables_out/housingstress_sa2.csv")
+
+```
+
+## What does it look like?
+
+Most of the SA2s have fewer than 30 per cent of households in housing stress.
+
+```{r}
+ggplot(housingstress_sa2, aes(x = prop_stress)) +
+  geom_histogram(bins = 50)
+```
+
+
+
