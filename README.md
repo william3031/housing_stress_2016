@@ -1,4 +1,4 @@
-#Introduction
+# Introduction
 
 Trying to calculate housing stress using 30/40 as in here:  https://www.ahuri.edu.au/policy/ahuri-briefs/2016/3040-indicator 
 

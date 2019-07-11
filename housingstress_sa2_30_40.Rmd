@@ -3,7 +3,7 @@ title: "Housing Stress - SA2s in Greater Melbourne"
 output: html_notebook
 ---
 
-#Introduction
+# Introduction
 
 Trying to calculate housing stress using 30/40 as in here:  https://www.ahuri.edu.au/policy/ahuri-briefs/2016/3040-indicator 
 
@@ -28,7 +28,7 @@ library(janitor)
 library(scales)
 ```
 
-##Importing the raw data
+## Importing the raw data
 
 ```{r}
 ##original files - 2016 census data - csv string - zeros suppressed
@@ -39,7 +39,7 @@ mortdata <- read_excel("sa2_data.xlsx", sheet = "sa2_hied_mrerd_2gmel_ zeros_sup
   filter(GCCSA == "Greater Melbourne")
 ```
 
-##Transforming the rent data
+## Transforming the rent data
 
 ```{r}
 rent <- rentdata %>% 
@@ -64,7 +64,7 @@ rent_hh <- rent %>%
 rent_hh
 ```
 
-##Transforming the mortgage data
+## Transforming the mortgage data
 
 ```{r}
 mort <- mortdata %>% 
@@ -89,7 +89,7 @@ mort_hh <- mort %>%
 mort_hh
 ```
 
-##Midpoints for income
+## Midpoints for income
 
 ```{r}
 hhincwk_mid <- rentdata %>% 
@@ -115,7 +115,7 @@ hhincwk_mid40 <- hhincwk_mid %>%
 hhincwk_mid40
 ```
 
-##Midpoints for rent and mortgages
+## Midpoints for rent and mortgages
 
 ```{r}
 rentwk_mid <- rentdata %>% 
@@ -144,7 +144,7 @@ mortwk_mid <- mortdata %>%
 mortwk_mid 
 ```
 
-##Joining
+## Joining
 
 ```{r}
 #joining the data  ####
@@ -157,7 +157,7 @@ mort_join <- left_join(mort_join, mortwk_mid)
 mort_join
 ```
 
-##Stress
+## Stress
 
 ```{r}
 rentalstress <- rent_join %>% 
@@ -202,7 +202,7 @@ ggplot(housingstress_sa2, aes(x = prop_stress)) +
 ```
 
 
-##The shapefile
+## The shapefile
 
 ```{r}
 gm_shp <- st_read("shp/SA2_2016_GMEL.shp") %>% 
@@ -212,7 +212,7 @@ gm_shp <- st_read("shp/SA2_2016_GMEL.shp") %>%
   mutate(prop_stress = round(prop_stress, 2))
 ```
 
-##The map
+## The map
 
 Concentrations in the growth areas.
 
