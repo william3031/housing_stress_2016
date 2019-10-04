@@ -5,7 +5,7 @@ output: html_notebook
 
 # Introduction
 
-Trying to calculate housing stress using 30/40 as in here:  https://www.ahuri.edu.au/policy/ahuri-briefs/2016/3040-indicator 
+Calculating housing stress using 30/40 as in here:  https://www.ahuri.edu.au/policy/ahuri-briefs/2016/3040-indicator 
 
 2016 Census - Counting Dwellings, Place of Enumeration (SA2)
 
