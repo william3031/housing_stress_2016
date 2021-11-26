@@ -1,6 +1,8 @@
 ---
 title: "Housing Stress - SA2s in Greater Melbourne"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Introduction
@@ -43,24 +45,24 @@ mortdata <- read_excel("sa2_data.xlsx", sheet = "sa2_hied_mrerd_2gmel_ zeros_sup
 
 ```{r}
 rent <- rentdata %>% 
-  rename(sa2 = SA2) %>% 
-  rename(hhincwk = `HIED Equivalised Total Household Income (weekly)`) %>% 
-  rename(rentwk = `RNTRD Rent (weekly) Ranges`) %>% 
+  rename(sa2 = SA2,
+         hhincwk = `HIED Equivalised Total Household Income (weekly)`,
+         rentwk = `RNTRD Rent (weekly) Ranges`) %>% 
   mutate(hhincwk = as_factor(hhincwk), rentwk = as_factor(rentwk)) %>% 
   rename(hh = Count) %>% 
   select(-Counting)
 rent
 
 rent_dw <- rent %>%
-  filter(hhincwk != 'Not applicable') %>% 
-  filter(rentwk != 'Not applicable') %>% 
+  filter(hhincwk != 'Not applicable',
+         rentwk != 'Not applicable') %>% 
   group_by(sa2) %>% 
   summarise(dw = sum(hh)) 
 rent_dw #improve this by just getting the dwelling data from the datapacks and joining them on at the end -G32
 
 rent_hh <- rent %>% 
-  filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable')) %>% 
-  filter(!rentwk %in% c('Not stated', 'Not applicable' ))
+  filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable'),
+         !rentwk %in% c('Not stated', 'Not applicable' ))
 rent_hh
 ```
 
@@ -68,24 +70,24 @@ rent_hh
 
 ```{r}
 mort <- mortdata %>% 
-  rename(sa2 = SA2) %>% 
-  rename(hhincwk = `HIED Equivalised Total Household Income (weekly)`) %>% 
-  rename(mortmth = `MRERD Mortgage Repayments (monthly) Ranges`) %>% 
+  rename(sa2 = SA2,
+         hhincwk = `HIED Equivalised Total Household Income (weekly)`,
+         mortmth = `MRERD Mortgage Repayments (monthly) Ranges`) %>% 
   mutate(hhincwk = as_factor(hhincwk), mortmth = as_factor(mortmth)) %>% 
   rename(hh = Count) %>% 
   select(-Counting)
 mort
 
 mort_dw <- mort %>% 
-  filter(hhincwk != 'Not applicable') %>% 
-  filter(mortmth != 'Not applicable') %>% 
+  filter(hhincwk != 'Not applicable',
+         mortmth != 'Not applicable') %>% 
   group_by(sa2) %>% 
   summarise(dw = sum(hh)) 
 mort_dw #as noted above
 
 mort_hh <- mort %>% 
-  filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable')) %>% 
-  filter(!mortmth %in% c('Not stated', 'Not applicable'))
+  filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable'),
+         !mortmth %in% c('Not stated', 'Not applicable'))
 mort_hh
 ```
 
@@ -93,14 +95,14 @@ mort_hh
 
 ```{r}
 hhincwk_mid <- rentdata %>% 
-  rename(sa2 = SA2) %>% 
-  rename(hhincwk = `HIED Equivalised Total Household Income (weekly)`) %>% 
+  rename(sa2 = SA2,
+         hhincwk = `HIED Equivalised Total Household Income (weekly)`) %>% 
   mutate(hhincwk = as_factor(hhincwk)) %>% 
   distinct(hhincwk) %>% 
   filter(!hhincwk %in% c('Nil income', 'Partial income stated', 'All incomes not stated', 'Not applicable', 'Total')) %>% 
-  mutate(inc_low = c(1, 150, 300, 400, 500, 650, 800, 1000, 1250, 1500, 1750, 2000, 2500, 3000)) %>% 
-  mutate(inc_high = c(149, 299, 399, 499, 649, 799, 999, 1249, 1499, 1749, 1999, 2499, 2999, 3499)) %>% 
-  mutate(inc_mid = (inc_low+inc_high)/2) %>% 
+  mutate(inc_low = c(1, 150, 300, 400, 500, 650, 800, 1000, 1250, 1500, 1750, 2000, 2500, 3000),
+         inc_high = c(149, 299, 399, 499, 649, 799, 999, 1249, 1499, 1749, 1999, 2499, 2999, 3499),
+         inc_mid = (inc_low+inc_high)/2) %>% 
   select(hhincwk, inc_mid)
 hhincwk_mid 
 ```
@@ -123,9 +125,8 @@ rentwk_mid <- rentdata %>%
   distinct(rentwk) %>% 
   mutate(rentwk = as_factor(rentwk)) %>% 
   filter(!rentwk %in% c('Not stated', 'Not applicable', 'Total' )) %>% 
-  mutate(rent_low = c(0, 1, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 550, 650, 750, 850, 950)) %>% 
-  mutate(rent_high = c(0, 74, 99, 124, 149, 174, 199, 224, 249, 274, 299, 324, 349, 374, 399, 424, 449, 549, 649, 749, 849, 949, 1050)) %>% 
-  mutate(rent_mid = (rent_low + rent_high)/2) %>% 
+  mutate(rent_low = c(0, 1, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 550, 650, 750, 850, 950),
+         rent_high = c(0, 74, 99, 124, 149, 174, 199, 224, 249, 274, 299, 324, 349, 374, 399, 424, 449, 549, 649, 749, 849, 949, 1050),rent_mid = (rent_low + rent_high)/2) %>% 
   select(rentwk, rent_mid)
 rentwk_mid
 
@@ -134,12 +135,12 @@ mortwk_mid <- mortdata %>%
   distinct(mortmth) %>% 
   mutate(mortmth = as_factor(mortmth)) %>% 
   filter(!mortmth %in% c('Not stated', 'Not applicable')) %>% 
-  mutate(mort_low = c(0, 1, 150, 300, 450, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 3000, 4000, 5000)) %>%
-  mutate(mortwk_low = mort_low/4) %>% 
-  mutate(mort_high = c(0, 149, 299, 449, 599, 799, 999, 1199, 1399, 1599, 1799, 1999, 2199, 2399, 2599, 2999, 3999, 4999, 5999)) %>% 
-  mutate(mortwk_high = mort_high/4) %>% 
-  mutate(mort_mid = (mort_low + mort_high)/2) %>% 
-  mutate(mortwk_mid = (mortwk_low + mortwk_high)/2) %>% 
+  mutate(mort_low = c(0, 1, 150, 300, 450, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 3000, 4000, 5000),
+         mortwk_low = mort_low/4,
+         mort_high = c(0, 149, 299, 449, 599, 799, 999, 1199, 1399, 1599, 1799, 1999, 2199, 2399, 2599, 2999, 3999, 4999, 5999),
+         mortwk_high = mort_high/4,
+         mort_mid = (mort_low + mort_high)/2,
+         mortwk_mid = (mortwk_low + mortwk_high)/2) %>% 
   select(mortmth, mort_mid, mortwk_mid)
 mortwk_mid 
 ```
@@ -161,8 +162,8 @@ mort_join
 
 ```{r}
 rentalstress <- rent_join %>% 
-  mutate(prophousing = rent_mid/inc_mid) %>% 
-  mutate(hstress = ifelse(prophousing <= 0.3, 0, hh)) %>% 
+  mutate(prophousing = rent_mid/inc_mid,
+         hstress = ifelse(prophousing <= 0.3, 0, hh)) %>% 
   group_by(sa2) %>% 
   summarise(lowinc_hh = sum(hh), hstress = sum(hstress))
 rentalstress <- left_join(rentalstress, rent_dw, by = "sa2") %>% 
@@ -171,8 +172,8 @@ rentalstress <- left_join(rentalstress, rent_dw, by = "sa2") %>%
 rentalstress
 
 mortgagestress <- mort_join %>% 
-  mutate(prophousing = mortwk_mid/inc_mid) %>% 
-  mutate(hstress = ifelse(prophousing <= 0.3, 0, hh)) %>% 
+  mutate(prophousing = mortwk_mid/inc_mid,
+         hstress = ifelse(prophousing <= 0.3, 0, hh)) %>% 
   group_by(sa2) %>% 
   summarise(lowinc_hh = sum(hh), hstress = sum(hstress))
 mortgagestress <- left_join(mortgagestress, mort_dw, by = "sa2") %>% 
